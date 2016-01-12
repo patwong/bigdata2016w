@@ -112,7 +112,7 @@
     </dependency>
     <dependency>
       <groupId>tl.lin</groupId>
-      <artifactId>lintool-datatypes</artifactId>
+      <artifactId>lintools-datatypes</artifactId>
       <version>1.0.0</version>
     </dependency>
 

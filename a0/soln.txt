@@ -1,0 +1,11 @@
+#ASSIGNMENT 0 SOLN
+#Patrick Wong 20317267
+
+[Question 1]
+1. th 83289
+2. an 32003
+3. to 23826
+
+[Question 2]
+"li" appears 6532 times.
+
