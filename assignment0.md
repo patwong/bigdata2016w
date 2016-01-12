@@ -7,5 +7,15 @@ The three most frequent two character prefixes:
 <h1>Question 2.</h1>
 The prefix "li" occurs 6515 times.
 
-<hi>Question 3, 4, 5</h1>
-Could not complete due to lack of access to Altiscale.
+<hi>Question 3</h1>
+yes
+
+<hi>Question 4</h1>
+The two most frequent two character prefixes:
+1. th 18007582
+2. in 8075427
+3. an 7341031
+
+<hi>Question 5</h1>
+The prefix "li" occurs  1257494 times.
+
