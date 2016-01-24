@@ -18,6 +18,12 @@ class Conf4(args: Seq[String]) extends ScallopConf(args) with Tokenizer {
   val imc = opt[Boolean](descr = "use in-mapper combining", required = false)
 }
 
+/*
+  Roughly follows the structure of bespin/ComputeBigramRelativeFrequencyPairs
+  Java: map -> combine -> reduce -> partition
+  My Spark version is as follows:
+  map -> reduceByKey -> sortByKey -> partitionBy -> map
+ */
 object ComputeBigramRelativeFrequencyPairs extends Tokenizer {
   val log = Logger.getLogger(getClass().getName())
 
@@ -43,6 +49,7 @@ object ComputeBigramRelativeFrequencyPairs extends Tokenizer {
 
     var margs1= 0.0f
 
+    //copies the partitioner in bespin/BigramPairs
     class hadoopPart(numParts: Int) extends Partitioner {
       def numPartitions: Int = numParts
       def getPartition(key: Any): Int = {
@@ -54,20 +61,26 @@ object ComputeBigramRelativeFrequencyPairs extends Tokenizer {
       }
     }
     val counts = textFile
+
+      //tokenizes the list and generates tuples for pair
       .flatMap(line => {
         val tokens = tokenize(line)
         if (tokens.length > 1) {
           val a2 = tokens.sliding(2).map(a => (a(0), a(1))).toList
+          //last element in the line is dropped because bigrams cannot be calculated on last word
           val a1 = tokens.map(p => staradd(p)).toList.dropRight(1)
-          a1 ::: a2
+          a1 ::: a2   //this is how you append two lists!
+                      //scala convention: last expression in a statement is the return value
         } else {
           List()
         }
       })
       .map(bigram => (bigram, 1))
-      .reduceByKey(_ + _)
+      .reduceByKey(_ + _)     //(x:type, y:type) => x + y
       .sortByKey(true, args.reducers())
       .partitionBy(new hadoopPart(args.reducers()))
+
+      //kayvee "map" analogous to the reduce job in bespin/Bigram
       .map(kayvee => {
         val k1 = kayvee._1
         if (k1._2 == "*") {
