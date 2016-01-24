@@ -3,13 +3,11 @@ package ca.uwaterloo.cs.bigdata2016w.patwong.assignment2
 //import com.sun.istack.internal.logging.Logger
 
 import ca.uwaterloo.cs.bigdata2016w.patwong.assignment2.Tokenizer
-
 import collection.mutable.HashMap
 
 import org.apache.log4j._
 import org.apache.hadoop.fs._
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkConf
+import org.apache.spark.{Partitioner, SparkContext, SparkConf}
 import org.rogach.scallop._
 
 class Conf4(args: Seq[String]) extends ScallopConf(args) with Tokenizer {
@@ -23,14 +21,6 @@ class Conf4(args: Seq[String]) extends ScallopConf(args) with Tokenizer {
 object ComputeBigramRelativeFrequencyPairs extends Tokenizer {
   val log = Logger.getLogger(getClass().getName())
 
-  def wcIter(iter: Iterator[String]): Iterator[(String, Int)] = {
-    val counts = new HashMap[String, Int]() { override def default(key: String) = 0 }
-
-    iter.flatMap(line => tokenize(line))
-      .foreach { t => counts.put(t, counts(t) + 1) }
-
-    counts.iterator
-  }
   def staradd(s: String): (String, String) = {
     val v = (s, "*")
     return v
@@ -51,27 +41,42 @@ object ComputeBigramRelativeFrequencyPairs extends Tokenizer {
     val outputDir = new Path(args.output())
     FileSystem.get(sc.hadoopConfiguration).delete(outputDir, true)
 
+    var margs1= 0.0f
 
+    class hadoopPart(numParts: Int) extends Partitioner {
+      def numPartitions: Int = numParts
+      def getPartition(key: Any): Int = {
+        //need to cast key as a tuple
+        val k12 = key match {
+          case tuple @ (a: String, b: String) => (a, b)
+        }
+        return (k12._1.hashCode() & Int.MaxValue) % numPartitions
+      }
+    }
     val counts = textFile
       .flatMap(line => {
         val tokens = tokenize(line)
         if (tokens.length > 1) {
-          val a1 = tokens.map(p => staradd(p)).toList
           val a2 = tokens.sliding(2).map(a => (a(0), a(1))).toList
+          val a1 = tokens.map(p => staradd(p)).toList.dropRight(1)
           a1 ::: a2
         } else {
           List()
         }
       })
       .map(bigram => (bigram, 1))
-      .sortByKey(true, args.reducers())
       .reduceByKey(_ + _)
-  //    .map(kayvee => {
-//        if
-      //})
-
-
-
+      .sortByKey(true, args.reducers())
+      .partitionBy(new hadoopPart(args.reducers()))
+      .map(kayvee => {
+        val k1 = kayvee._1
+        if (k1._2 == "*") {
+          margs1 = kayvee._2
+          kayvee
+        } else {
+          (kayvee._1, kayvee._2.toFloat / margs1)
+        }
+      })
     counts.saveAsTextFile(args.output())
   }
 }
