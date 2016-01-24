@@ -1,0 +1,1 @@
+INDEX VERSION 1.126+/u0/pn2wong/cs489/bigdata2016w/src/main/java/ca/uwaterloo/cs/bigdata2016w/patwong/assignment1/.metadata/.plugins/org.eclipse.jdt.core

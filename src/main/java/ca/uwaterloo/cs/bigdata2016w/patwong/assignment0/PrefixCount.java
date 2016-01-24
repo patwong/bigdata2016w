@@ -45,7 +45,7 @@ public class PrefixCount extends Configured implements Tool {
       String line = ((Text) value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
-        String w = itr.nextToken().toLowerCase(); //replaceAll("(^[^a-z]+|[^a-z]+$)", "");
+        String w = itr.nextToken().toLowerCase().replaceAll("(^[^a-z]+|[^a-z]+$)", "");
         if (w.length() == 0) continue;
         if (w.length() < 2) continue;
         w = w.substring(0, 2);
@@ -64,7 +64,7 @@ public class PrefixCount extends Configured implements Tool {
       String line = ((Text) value).toString();
       StringTokenizer itr = new StringTokenizer(line);
       while (itr.hasMoreTokens()) {
-        String w = itr.nextToken().toLowerCase(); //.replaceAll("(^[^a-z]+|[^a-z]+$)", "");
+        String w = itr.nextToken().toLowerCase().replaceAll("(^[^a-z]+|[^a-z]+$)", "");
         if (w.length() == 0) continue;
         if (w.length() < 2) continue;
         w = w.substring(0,2);

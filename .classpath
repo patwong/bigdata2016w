@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="bespin/src/main/java"/>
+	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="lib" path="bespin/target/bespin-0.1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="bespin/target/original-bespin-0.1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="target/bigdata2016w-0.1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="target/original-bigdata2016w-0.1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="output" path="target/classes"/>
+</classpath>
