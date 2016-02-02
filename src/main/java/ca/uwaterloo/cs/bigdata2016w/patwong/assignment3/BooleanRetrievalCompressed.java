@@ -39,18 +39,20 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
   private BooleanRetrievalCompressed() {}
   private static int foldercount = 0;
 
+  //obtained from internet:
+  //http://stackoverflow.com/questions/1844688/read-all-files-in-a-folder
   public void listFilesForFolder(final File folder) {
     for (final File fileEntry : folder.listFiles()) {
       if (fileEntry.isDirectory()) {
-        //listFilesForFolder(fileEntry);
-        foldercount++;
+        //do literally nothing
       } else {
-        ///System.out.println(fileEntry.getName());
+        foldercount++;
       }
     }
   }
   private void initialize(String indexPath, String collectionPath, FileSystem fs) throws IOException {
     index = new MapFile.Reader[foldercount];
+    listFilesForFolder(new File(indexPath));
     for(int i = 0; i < foldercount - 1; i++) {
       if(i > 9) {
         index[i] = new MapFile.Reader(new Path(indexPath + "/part-r-000" + i), fs.getConf());
@@ -133,7 +135,7 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
     PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>> value =
         new PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>>();
     key.set(term);
-    int z = (term.hashCode() & Integer.MAX_VALUE) % (foldercount-1);
+    int z = (term.hashCode() & Integer.MAX_VALUE) % (foldercount - 1);
     index[z].get(key, value);
     return value.getLeftElement();
   }
