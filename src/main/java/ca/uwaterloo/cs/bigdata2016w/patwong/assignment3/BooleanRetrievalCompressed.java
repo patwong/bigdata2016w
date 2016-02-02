@@ -51,8 +51,9 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
     }
   }
   private void initialize(String indexPath, String collectionPath, FileSystem fs) throws IOException {
-    index = new MapFile.Reader[foldercount];
+
     listFilesForFolder(new File(indexPath));
+    index = new MapFile.Reader[foldercount];
     for(int i = 0; i < foldercount - 1; i++) {
       if(i > 9) {
         index[i] = new MapFile.Reader(new Path(indexPath + "/part-r-000" + i), fs.getConf());
