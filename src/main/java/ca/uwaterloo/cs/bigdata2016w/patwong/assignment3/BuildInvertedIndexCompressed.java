@@ -23,6 +23,7 @@ import org.apache.hadoop.mapreduce.Partitioner;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.io.WritableUtils;  //added for index compression
@@ -82,17 +83,14 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
   }
   private static class MyReducer extends
       Reducer<PairOfStringInt, IntWritable, Text, PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>>> {
-    private final static IntWritable DF = new IntWritable();
+    //private final static IntWritable DF = new IntWritable();
     private static final Text WORD = new Text();
     private static String t_prev = "";
     private static int df;
-    private static ArrayListWritable<VIntWritable> Arr1 = new ArrayListWritable<VIntWritable>();
-    private static ArrayListWritable<VIntWritable> Arr2 = new ArrayListWritable<VIntWritable>();
-
-    //FileOutputStream fop1 = NULL;
-    //FileOutputStream fop2 = NULL;
-    //FileInputStream fin1 = NULL;
-    //FileInputStream fin2 = NULL;
+//    private static ArrayListWritable<VIntWritable> Arr1 = new ArrayListWritable<VIntWritable>();
+//    private static ArrayListWritable<VIntWritable> Arr2 = new ArrayListWritable<VIntWritable>();
+    private static ArrayListWritable<VIntWritable> Arr1;
+    private static ArrayListWritable<VIntWritable> Arr2;
     private static File file_n;
     private static File file_f;
     private static FileOutputStream fop1;
@@ -104,11 +102,12 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
     private static DataInput in1;
     private static DataInput in2;
     private static int dgap;
+
     @Override
     public void setup(Context context) throws IOException, InterruptedException{
       //initialize arrays
-//      ArrayListWritable<VInt> vint_n = new ArrayListWritable<VIntWritable>();
-//      ArrayListWritable<VInt> vint_f = new ArrayListWritable<VIntWritable>();
+      Arr1 = new ArrayListWritable<VIntWritable>();
+      Arr2 = new ArrayListWritable<VIntWritable>();
       file_n = new File("buffer1.txt");
       file_f = new File("buffer2.txt");
       fop1 = new FileOutputStream(file_n);
@@ -137,30 +136,44 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
         for(int c = 0; c < df; c++) {
           j1 = WritableUtils.readVInt(in1);
           j2 = WritableUtils.readVInt(in2);
+          //System.out.println("j1:" + j1 + ", j2:" + j2);
           Arr1.add(new VIntWritable(j1));
           Arr2.add(new VIntWritable(j2));
+          //System.out.println("j1:" + Arr1.get(c) + ", j2:" + Arr2.get(c));
+          if(Arr1.isEmpty()) {
+            System.out.println("Arr1 is empty");
+          }
+          if(Arr2.isEmpty()) {
+            //System.out.println("size of arr2 is:" + Arr2.size());
+            System.out.println("Arr2 is empty");
+          }
         }
-        PrintWriter writer1 = new PrintWriter(file_n);
-        PrintWriter writer2 = new PrintWriter(file_f);
-        writer1.print("");
-        writer1.close();
-        writer2.print("");
-        writer2.close();
+
+        //System.out.println("size of arr1 is:" + Arr1.size());
+
+        //source on deleting content of file:
+        //http://stackoverflow.com/questions/6994518/how-to-delete-the-content-of-text-file-without-deleting-itself
+        PrintWriter w1 = new PrintWriter(file_n);
+        PrintWriter w2 = new PrintWriter(file_f);
+        w1.close();
+        w2.close();
         WORD.set(key.getLeftElement());
+        //System.out.println("size of arr1 is:" + Arr1.size() + ", key is: " + key.getLeftElement());
+        //System.out.println("size of arr2 is:" + Arr2.size() + " first val is: " + Arr1.get(1));
         context.write(WORD, new PairOfWritables<ArrayListWritable<VIntWritable>, ArrayListWritable<VIntWritable>>(Arr1, Arr2));
         df = 0;
         Arr1.clear();
         Arr2.clear();
       }
-
       while (iter.hasNext()) {
         df++;
-        WritableUtils.writeVInt(out1,key.getRightElement()-dgap);  //getting n
-        WritableUtils.writeVInt(out2, iter.next().get());               //getting f
+        WritableUtils.writeVInt(out1, key.getRightElement());   //getting n
+        WritableUtils.writeVInt(out2, iter.next().get());       //getting f
       }
       dgap = key.getRightElement();
       t_prev = key.getLeftElement();
     }
+
     @Override
     public void cleanup(Context context)
         throws IOException, InterruptedException {
@@ -171,14 +184,16 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
       j2 = WritableUtils.readVInt(in2);
       Arr1.add(new VIntWritable(j1));
       Arr2.add(new VIntWritable(j2));
-      PrintWriter writer1 = new PrintWriter(file_n);
-      PrintWriter writer2 = new PrintWriter(file_f);
-      writer1.print("");
-      writer1.close();
-      writer2.print("");
-      writer2.close();
+      PrintWriter w1 = new PrintWriter(file_n);
+      PrintWriter w2 = new PrintWriter(file_f);
+      w1.print("");
+      w1.close();
+      w2.print("");
+      w2.close();
       WORD.set(t_prev);
       context.write(WORD, new PairOfWritables<ArrayListWritable<VIntWritable>, ArrayListWritable<VIntWritable>>(Arr1, Arr2));
+      Arr1.clear();
+      Arr2.clear();
     }
   }
 
@@ -201,6 +216,9 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
 
     @Option(name = "-reducers", metaVar = "[num]", required = false, usage = "number of reducers")
     public int numReducers = 1;
+
+    @Option(name = "-textOutput", required = false, usage = "use TextOutputFormat (otherwise, SequenceFileOutputFormat)")
+    public boolean textOutput = false;
   }
 
   /**
@@ -222,6 +240,7 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
     LOG.info(" - input path: " + args.input);
     LOG.info(" - output path: " + args.output);
     LOG.info(" - num reducers: " + args.numReducers);
+    LOG.info(" - text output: " + args.textOutput);
 
     Job job = Job.getInstance(getConf());
     job.setJobName(BuildInvertedIndexCompressed.class.getSimpleName());
@@ -237,7 +256,12 @@ public class BuildInvertedIndexCompressed extends Configured implements Tool {
     job.setMapOutputValueClass(IntWritable.class);
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(PairOfWritables.class);
-    job.setOutputFormatClass(MapFileOutputFormat.class);
+    if (args.textOutput) {
+      job.setOutputFormatClass(TextOutputFormat.class);
+    } else {
+      job.setOutputFormatClass(MapFileOutputFormat.class);
+    }
+
 
     job.setMapperClass(MyMapper.class);
     job.setPartitionerClass(MyPartitioner.class);

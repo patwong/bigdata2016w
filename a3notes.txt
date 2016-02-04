@@ -1,0 +1,16 @@
+questions:
+- folder is 4?
+- how is index.get(key,val) getting values into val?
+- what to do about an arraylistwritable?
+	- or is it null?
+
+how to get dgaps?
+
+is fs.getConf() for all initialize correct?
+
+      file_n = new File("buffer1.txt");
+      fop1 = new FileOutputStream(file_n);
+      fin1 = new FileInputStream(file_n);
+      out1 = new DataOutputStream(fop1);
+      in1 = new DataInputStream(fin1);
+

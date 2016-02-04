@@ -24,6 +24,8 @@ import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 import org.kohsuke.args4j.ParserProperties;
+import java.util.Iterator;
+
 
 import tl.lin.data.array.ArrayListWritable;
 import tl.lin.data.pair.PairOfInts;
@@ -39,28 +41,33 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
   private BooleanRetrievalCompressed() {}
   private static int foldercount = 0;
 
+  //to count how many folders are created
   //obtained from internet:
   //http://stackoverflow.com/questions/1844688/read-all-files-in-a-folder
   public void listFilesForFolder(final File folder) {
     for (final File fileEntry : folder.listFiles()) {
       if (fileEntry.isDirectory()) {
-        //do literally nothing
-      } else {
         foldercount++;
       }
     }
+ //   System.out.println("The folder count is " + foldercount + "."); //debug
   }
   private void initialize(String indexPath, String collectionPath, FileSystem fs) throws IOException {
 
     listFilesForFolder(new File(indexPath));
+ //   System.out.println("The folder count is " + foldercount + "."); //debug
+
     index = new MapFile.Reader[foldercount];
-    for(int i = 0; i < foldercount - 1; i++) {
-      if(i > 9) {
+    for(int i = 0; i < foldercount; i++) {
+      if(i > 9) { //double digit folder index format
         index[i] = new MapFile.Reader(new Path(indexPath + "/part-r-000" + i), fs.getConf());
-      } else {
+      } else {    //single digit folder index format
         index[i] = new MapFile.Reader(new Path(indexPath + "/part-r-0000" + i), fs.getConf());
+        if(index[i] == null)
+          System.out.println("index[" + i + "] IS NULL!!!!!!");
       }
     }
+    //System.out.println("size of INDEX is: " + index.size());
     collection = fs.open(new Path(collectionPath));
     stack = new Stack<Set<Integer>>();
   }
@@ -77,16 +84,23 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
         pushTerm(t);
       }
     }
+    //if(stack.empty()) {
+//      System.out.println("runQuery: SET is EMPTY");
+//    } else {
+//      System.out.println("runQuery: SET is NOT EMPTY!!!!");
+//    }
 
     Set<Integer> set = stack.pop();
 
     for (Integer i : set) {
       String line = fetchLine(i);
+      System.out.println("for loop in runquery:" + i);
       System.out.println(i + "\t" + line);
     }
   }
 
   private void pushTerm(String term) throws IOException {
+    System.out.println("pushTerm returns:"+fetchDocumentSet(term));
     stack.push(fetchDocumentSet(term));
   }
 
@@ -101,7 +115,6 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
         sn.add(n);
       }
     }
-
     stack.push(sn);
   }
 
@@ -124,20 +137,46 @@ public class BooleanRetrievalCompressed extends Configured implements Tool {
 
   private Set<Integer> fetchDocumentSet(String term) throws IOException {
     Set<Integer> set = new TreeSet<Integer>();
-
+    //fetchDocumentSet expects a VIntWritable - an array is returned here
+//    if(fetchPostings(term) == null) {
+//      System.out.println("IT IS NULL SOMETHING IS WRONG");
+//    } else {
+//      System.out.println("IT IS _NOT_ NULL SOMETHING IS NOT WRONG?");
+//    }
     for (VIntWritable x: fetchPostings(term)) {
+      //System.out.println("this is in the vintwritable:" + x.get());
       set.add(x.get());
+    }
+    if(set.isEmpty()) {
+      System.out.println("the set is empty!!!!");
+    } else {
+      System.out.println("the set is NOT empty");
+      Iterator iter = set.iterator();
+      while(iter.hasNext()) {
+        System.out.println(iter.next());
+      }
     }
     return set;
   }
 
   private ArrayListWritable<VIntWritable> fetchPostings(String term) throws IOException {
     Text key = new Text();
-    PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>> value =
+    PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>>   value =
         new PairOfWritables<ArrayListWritable<VIntWritable>,ArrayListWritable<VIntWritable>>();
     key.set(term);
-    int z = (term.hashCode() & Integer.MAX_VALUE) % (foldercount - 1);
+    int z = (term.hashCode() & Integer.MAX_VALUE) % (foldercount);
     index[z].get(key, value);
+    if(value == null) {
+      System.out.println("VALUE IS NULL!!!!");
+    }
+    if(value.getLeftElement() == null) {
+      System.out.println("LEFT VALUE IS NULL!!!!");
+    }
+    if(value.getRightElement() == null) {
+      System.out.println("RIGHT VALUE IS NULL!!!!");
+    }
+//    System.out.println("term is: " + term);
+//    System.out.println("index is: " + z);
     return value.getLeftElement();
   }
 
